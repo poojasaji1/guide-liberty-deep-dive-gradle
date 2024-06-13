@@ -1,4 +1,4 @@
-// Copyright (c) 2023 IBM Corporation and others.
+// Copyright (c) 2024 IBM Corporation and others.
 // Licensed under Creative Commons Attribution-NoDerivatives
 // 4.0 International (CC BY-ND 4.0)
 //   https://creativecommons.org/licenses/by-nd/4.0/
@@ -8,11 +8,11 @@
 //
 :projectid: liberty-deep-dive-gradle
 :page-layout: guide-multipane
-:page-duration: 80 minutes
+:page-duration: 120 minutes
 :page-releasedate: 2023-03-30
 :page-essential: false
 :page-description: Learn how to use Liberty to develop and run Java microservices.
-:page-tags: ['Jakarta EE', 'MicroProfile']
+:page-tags: ['jakarta-ee', 'microprofile']
 :page-related-guides: ['microprofile-openapi', 'cdi-intro', 'microprofile-config', 'jpa-intro', 'microprofile-jwt', 'microprofile-health', 'microprofile-metrics', 'containerize', 'openliberty-operator-intro', 'kubernetes-microprofile-config']
 :page-permalink: /guides/{projectid}
 :common-includes: https://raw.githubusercontent.com/OpenLiberty/guides-common/prod
@@ -26,22 +26,26 @@
 [.hidden]
 NOTE: This repository contains the documentation source. To view this exercise in published form, view it on the https://openliberty.io/guides/{projectid}.html[Open Liberty website].
 
-Liberty is a cloud-optimized Java runtime that is fast to start up with a low memory footprint and the dev mode for quick iteration. With Liberty, adopting the latest open cloud-native Java APIs, like MicroProfile and Jakarta EE, is as simple as adding features to your server configuration. The Liberty zero migration architecture lets you focus on what's important and not the APIs changing under you.
+Liberty is a cloud-optimized Java runtime that is fast to start up with a low memory footprint and a https://openliberty.io/docs/latest/development-mode.html[dev mode^], for quick iteration. With Liberty, adopting the latest open cloud-native Java APIs, like MicroProfile and Jakarta EE, is as simple as adding features to your Liberty configuration. The Liberty zero migration architecture lets you focus on what's important and not the APIs changing under you.
 
 == What you'll learn
 
-You will learn how to build a RESTful microservice on Liberty with Jakarta EE and MicroProfile. You will use Gradle throughout this exercise to build the microservice and to interact with the running Liberty instance. Then, you’ll build a container image for the microservice. You will also learn how to secure the REST endpoints and use JSON Web Tokens to communicate with the provided `system` secured microservice.
+You will learn how to build a RESTful microservice on Liberty with Jakarta EE and MicroProfile. You will use Gradle throughout this exercise to build the microservice and to interact with the running Liberty instance. Then, you’ll build a container image for the microservice and deploy it to Kubernetes in a Liberty Docker container. You will also learn how to secure the REST endpoints and use JSON Web Tokens to communicate with the provided `system` secured microservice.
 
 The microservice that you’ll work with is called `inventory`. The `inventory` microservice persists data into a PostgreSQL database. 
 
-image::inventory.png[Inventory microservice,align="center"]
+image::inventory.png[Inventory microservice,align="center",height=85%,width=85%]
 
 == Additional prerequisites
 
-Before you begin, Podman needs to be installed before you start the *Persisting Data* module. For installation instructions, refer to the https://podman.io/getting-started/installation[official Podman documentation^]. You will build and run the microservices in containers.
+Podman must be installed before you start the *Persisting Data* module. For installation instructions, refer to the https://podman.io/getting-started/installation[official Podman documentation^]. You will build and run the microservices in containers.
 
 If you are running Mac or Windows, make sure to start your Podman-managed VM before you proceed.
 
+Also, if you are using Linux, Kubernetes must be installed before you start the **Deploying the microservice to Kubernetes**.
+
+You will use `Minikube` as a single-node Kubernetes cluster that runs locally in a virtual machine. Make sure that you have `kubectl` installed. If you need to install `kubectl`, see the https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl-on-linux[kubectl installation instructions^].
+For Minikube installation instructions, see the https://github.com/kubernetes/minikube#installation[Minikube documentation^].
 
 == Getting started
 
@@ -83,7 +87,7 @@ endif::[]
 
 Liberty now offers an easier way to get started with developing your application: the Open Liberty Starter. This tool provides a simple and quick way to get the necessary files to start building an application on Liberty. Through this tool, you can specify your application and project name. You can also choose a build tool from either Maven or Gradle, and pick the Java SE, Jakarta EE, and MicroProfile versions for your application.
 
-In this workshop, the starting project is provided for you or you can use the Open Liberty Starter to create the starting point of the application. Gradle is used as the selected build tool and the application uses of Jakarta EE 10 and MicroProfile 6.
+In this workshop, the Open Liberty Starter is used to create the starting point of the application. Gradle is used as the selected build tool and the application uses of Jakarta EE 10 and MicroProfile 6.1.
 
 To get started with this tool, see the Getting Started page: https://openliberty.io/start/[https://openliberty.io/start/^]
 
@@ -92,23 +96,31 @@ On that page, enter the following properties in the **Create a starter applicati
 * Under Group specify: `io.openliberty.deepdive`
 * Under Artifact specify: `inventory`
 * Under Build Tool select: `Gradle`
-* Under Java SE Version select: `your version`
-* Under Java EE/Jakarta EE Version select: `10`
-* Under MicroProfile Version select: `6.0` 
+* Under Java SE Version select: `17`
+* Under Java EE/Jakarta EE Version select: `10.0`
+* Under MicroProfile Version select: `6.1` 
 
 ifndef::cloud-hosted[]
-Then, click `Generate Project`, which downloads the starter project as `inventory.zip` file to the `start` directory of this project. You can replace the provided `inventory.zip` file.
+Then, click `Generate Project`, which downloads the starter project as `inventory.zip` file.
 
-Next, extract the `inventory.zip` file to the `guide-liberty-deepdive-gradle/start/inventory` directory.
+Next, extract the `inventory.zip` file on your system. Move the contents of this extracted `inventory` directory to the `start` directory of this project, which is at the following path: `guide-liberty-deepdive-gradle/start/inventory`.
 
-include::{common-includes}/os-tabs.adoc[]
+Instead of manually downloading and extracting the project, run the following commands in the `start` directory:
+
+[.tab_link.windows_link]
+`*WINDOWS*`
+[.tab_link.mac_link]
+`*MAC*`
+[.tab_link.linux_link]
+`*LINUX*`
+
 [.tab_content.windows_section]
 --
-Use Powershell for the following commands:
+
 [role='command']
 ```
-cd start
-Expand-Archive -LiteralPath .\inventory.zip -DestinationPath inventory
+curl -o inventory.zip 'https://start.openliberty.io/api/start?a=inventory&b=gradle&e=10.0&g=io.openliberty.deepdive&j=17&m=6.1'
+Expand-Archive -Path .\inventory.zip
 ```
 --
 
@@ -116,7 +128,7 @@ Expand-Archive -LiteralPath .\inventory.zip -DestinationPath inventory
 --
 [role='command']
 ```
-cd start
+curl -o inventory.zip 'https://start.openliberty.io/api/start?a=inventory&b=gradle&e=10.0&g=io.openliberty.deepdive&j=17&m=6.1'
 unzip inventory.zip -d inventory
 ```
 --
@@ -126,7 +138,7 @@ ifdef::cloud-hosted[]
 In this Skills Network environment, instead of manually downloading and extracting the project, run the following commands:
 ```bash
 cd /home/project/guide-liberty-deep-dive-gradle/start
-curl -o inventory.zip 'https://start.openliberty.io/api/start?a=inventory&b=maven&e=9.1&g=io.openliberty.deepdive&j=11&m=5.0'
+curl -o inventory.zip 'https://start.openliberty.io/api/start?a=inventory&b=gradle&e=10.0&g=io.openliberty.deepdive&j=17&m=6.1'
 unzip inventory.zip -d inventory
 ```
 
@@ -134,8 +146,8 @@ After getting the ***inventory*** project, switch the workspace to the ***/home/
 > - Select **File** > **Close Workspace** from the menu of the IDE.
 >   - Click the OK button to confirm to close.
 >   - Wait for the IDE to refresh.
-> - Select **File** > **Open Workspace...** from the menu of the IDE.
->   - In the **Open Workspace** window, select the ***/home/project/guide-liberty-deep-dive-gradle/start/inventory*** directory and click the **Open** button.
+> - Select **File** > **Open...** from the menu of the IDE.
+>   - In the **Open** window, select the ***home*** directory from the top dropdown list, and then select the ***/home/project/guide-liberty-deep-dive-gradle/start/inventory*** directory and click the **Open** button.
 >   - Wait for the IDE to refresh.
 endif::[]
 
@@ -145,14 +157,14 @@ This application is configured to be built with Gradle. Every Gradle-configured 
 
 // file 0
 settings.gradle
-[source, gradle, linenums, role='code_column']
+[source, gradle, linenums, role='code_column hide_tags=copyright']
 ----
 include::finish/module-getting-started/settings.gradle[]
 ----
 
 // file 1
 build.gradle
-[source, gradle, linenums, role='code_column']
+[source, gradle, linenums, role='code_column hide_tags=copyright']
 ----
 include::finish/module-getting-started/build.gradle[]
 ----
@@ -164,7 +176,7 @@ To begin, open a command-line session and navigate to your application directory
 ifndef::cloud-hosted[]
 [role='command']
 ```
-cd inventory
+cd start/inventory
 ```
 endif::[]
 
@@ -174,7 +186,7 @@ cd /home/project/guide-liberty-deep-dive-gradle/start/inventory
 ```
 endif::[]
 
-Build and deploy the `inventory` microservice to Liberty by running the Gradle `libertyRun` task:
+Build and deploy the `inventory` microservice to Liberty by running the Gradle `libertyRun` goal:
 
 include::{common-includes}/os-tabs.adoc[]
 [.tab_content.windows_section]
@@ -195,40 +207,23 @@ gradlew libertyRun
 
 The `gradlew` command initiates a Gradle build, during which the target directory is created to store all build-related files.
 
-The `libertyRun` argument specifies the Liberty `run` task, which starts a Liberty server instance in the foreground. As part of this phase, a Liberty server runtime is downloaded and installed into the `build/wlp` directory. Additionally, a server instance is created and configured in the `build/wlp/usr/servers/defaultServer` directory, and the application is installed into that server by using https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/rwlp_loose_applications.html[loose config^].
+The `libertyRun` argument specifies the Liberty `run` goal, which starts a Liberty instance in the foreground. As part of this phase, a Liberty server runtime is downloaded and installed into the `build/wlp` directory. Additionally, a Liberty instance is created and configured in the `build/wlp/usr/servers/defaultServer` directory, and the application is installed into that Liberty instance by using https://www.ibm.com/support/knowledgecenter/en/SSEQTP_liberty/com.ibm.websphere.wlp.doc/ae/rwlp_loose_applications.html[loose config^].
 
 For more information about the Liberty Gradle plug-in, see its https://github.com/OpenLiberty/ci.gradle[GitHub repository^].
 
-While the server starts up, various messages display in your command-line session. Wait for the following message, which indicates that the server startup is complete:
+While the Liberty instance starts up, various messages display in your command-line session. Wait for the following message, which indicates that the instance startup is complete:
 
 [source, role="no_copy"]
 ----
 [INFO] [AUDIT] CWWKF0011I: The server defaultServer is ready to run a smarter planet.
 ----
 
-When you need to stop the server, press `CTRL+C` in the command-line session where you ran the server, or run the `libertyStop` goal from the `start/inventory` directory in another command-line session:
-
-include::{common-includes}/os-tabs.adoc[]
-[.tab_content.windows_section]
---
-[role='command']
-```
-gradlew libertyStop
-```
---
-
-[.tab_content.mac_section.linux_section]
---
-[role='command']
-```
-./gradlew libertyStop
-```
---
+When you need to stop the Liberty instance, press `CTRL+C` in the command-line session where you ran the Liberty.
 
 
-=== Starting and stopping the Liberty server in the background
+=== Starting and stopping the Liberty in the background
 
-Although you can start and stop the server in the foreground by using the Gradle `libertyRun` task, you can also start and stop the server in the background with the Gradle `libertyStart` and `libertyStop` goals:
+Although you can start and stop the Liberty instance in the foreground by using the Gradle `libertyRun` task, you can also start and stop the server in the background with the Gradle `libertyStart` and `libertyStop` goals:
 
 include::{common-includes}/os-tabs.adoc[]
 [.tab_content.windows_section]
@@ -249,11 +244,11 @@ gradlew libertyStop
 ```
 --
 
-=== Updating the server configuration without restarting the server
+=== Updating the Liberty configuration without restarting the instance
 
-The Liberty Gradle plug-in includes a `dev` task that listens for any changes in the project, including application source code or configuration. The Liberty server automatically reloads the configuration without restarting. This goal allows for quicker turnarounds and an improved developer experience.
+The Liberty Gradle plug-in includes a `dev` goal that listens for any changes in the project, including application source code or configuration. The Liberty instance automatically reloads the configuration without restarting. This goal allows for quicker turnarounds and an improved developer experience.
 
-If the Liberty server is running, stop it and restart it in dev mode by running the `libertyDev` goal in the `start/inventory` directory:
+If the Liberty instance is running, stop it and restart it in dev mode by running the `libertyDev` goal in the `start/inventory` directory:
 
 include::{common-includes}/os-tabs.adoc[]
 [.tab_content.windows_section]
@@ -272,7 +267,7 @@ gradlew libertyDev
 ```
 --
 
-After you see the following message, your application server in dev mode is ready:
+After you see the following message, your Liberty instance is ready in dev mode:
 
 [role="no_copy"]
 ----
@@ -280,7 +275,7 @@ After you see the following message, your application server in dev mode is read
 *    Liberty is running in dev mode.
 ----
 
-Dev mode automatically picks up changes that you make to your application and allows you to run tests by pressing the `enter/return` key in the active command-line session. When you’re working on your application, rather than rerunning Gradle tasks, press the `enter/return` key to verify your change.
+Dev mode automatically picks up changes that you make to your application and allows you to run tests by pressing the `enter/return` key in the active command-line session. When you’re working on your application, rather than rerunning Gradle commands, press the `enter/return` key to verify your change.
 
 === Developing a RESTful microservice
 
@@ -381,7 +376,7 @@ The Jakarta RESTful Web Services API supports a number of ways to marshal JSON. 
 
 === Running the application
 
-Because you started the Liberty server in dev mode at the beginning of this exercise, all the changes were automatically picked up.
+Because you started the Liberty in dev mode at the beginning of this exercise, all the changes were automatically picked up.
 
 Check out the service that you created at the http://localhost:9080/inventory/api/systems URL. If successful, it returns `[]` to you.
 
@@ -417,7 +412,7 @@ server.xml
 include::finish/module-openapi/src/main/liberty/config/server.xml[]
 ----
 
-The MicroProfile OpenAPI API is included in the [hotspot=mp5 file=0]`microProfile` dependency that is specified in your `build.gradle` file. The [hotspot=mp5 file=1]`microProfile` feature that includes the `mpOpenAPI` feature is also enabled in the `server.xml` file.
+The MicroProfile OpenAPI API is included in the [hotspot=mp5 file=0]`microProfile` dependency that is specified in your `build.gradle` file. The [hotspot=mp5 file=1]`microProfile` feature that includes the `mpOpenAPI` feature is also enabled in the `server.xml` configuration file.
 
 === Generating the OpenAPI document
 
@@ -447,9 +442,9 @@ Add OpenAPI [hotspot=listContentsAPIResponseSchema hotspot=getSystemAPIResponseS
 
 Note, the `@Parameter` annotation can be placed either [hotspot=getSystemParameter file=0]`inline` or [hotspot=removeSystemParameter file=0]`outline`. Examples of both are provided within this workshop.
 
-Many OpenAPI annotations are available and can be used according to what's best for your application and its classes. You can find all the annotations in the https://download.eclipse.org/microprofile/microprofile-open-api-3.0/microprofile-openapi-spec-3.0.html#_annotations[MicroProfile OpenAPI specification^].
+Many OpenAPI annotations are available and can be used according to what's best for your application and its classes. You can find all the annotations in the https://download.eclipse.org/microprofile/microprofile-open-api-3.1/microprofile-openapi-spec-3.1.html#_annotations[MicroProfile OpenAPI specification^].
 
-Because the Liberty server was started in dev mode at the beginning of this exercise, your changes were automatically picked up. Go to the http://localhost:9080/openapi URL to see the updated endpoint descriptions. The endpoints at which your REST methods are served now more meaningful:
+Because the Liberty was started in dev mode at the beginning of this exercise, your changes were automatically picked up. Go to the http://localhost:9080/openapi URL to see the updated endpoint descriptions. The endpoints at which your REST methods are served now more meaningful:
 
 ifdef::cloud-hosted[]
 ```bash
@@ -551,16 +546,16 @@ You can learn more about MicroProfile OpenAPI from the https://openliberty.io/gu
 
 ==  Configuring the microservice
 
-Next, you can externalize your Liberty server configuration and inject configuration for your microservice by using MicroProfile Config.
+Next, you can externalize your Liberty configuration and inject configuration for your microservice by using MicroProfile Config.
 
 
 === Enabling configurable ports and context root
 
-So far, you used hardcoded values to set the HTTP and HTTPS ports and the context root for the Liberty server. These configurations can be externalized so you can easily change their values when you want to deploy your microservice by different ports and context root.
+So far, you used hardcoded values to set the HTTP and HTTPS ports and the context root for the Liberty. These configurations can be externalized so you can easily change their values when you want to deploy your microservice by different ports and context root.
 
 [role='code_command hotspot file=0', subs="quotes"]
 ----
-#Replace the `server.xml` file.#
+#Replace the Liberty `server.xml` configuration file.#
 `src/main/liberty/config/server.xml`
 ----
 
@@ -570,7 +565,7 @@ server.xml
 include::finish/module-config/src/main/liberty/config/server.xml[]
 ----
 
-Add variables for the [hotspot=httpPortVariable file=0]`HTTP` port, [hotspot=httpsPortVariable file=0]`HTTPS` port, and the [hotspot=contextRootVariable file=0]`context root` to the `server.xml` file. Change the [hotspot=editedHttpEndpoint file=0]`httpEndpoint` element to reflect the new `default.http.port` and `default.http.port` variables and change the [hotspot=editedContextRoot file=0]`contextRoot` to use the new `default.context.root` variable too.
+Add variables for the [hotspot=httpPortVariable file=0]`HTTP` port, [hotspot=httpsPortVariable file=0]`HTTPS` port, and the [hotspot=contextRootVariable file=0]`context root` to the `server.xml` configuration file. Change the [hotspot=editedHttpEndpoint file=0]`httpEndpoint` element to reflect the new `http.port` and `https.port` variables and change the [hotspot=editedContextRoot file=0]`contextRoot` to use the new `context.root` variable too.
 
 [role='code_command hotspot file=1', subs="quotes"]
 ----
@@ -579,24 +574,18 @@ Add variables for the [hotspot=httpPortVariable file=0]`HTTP` port, [hotspot=htt
 ----
 
 build.gradle
-[source, xml, gradle, role='code_column']
+[source, xml, gradle, role='code_column hide_tags=copyright']
 ----
 include::staging/module-config/build.gradle[]
 ----
 
 Set the [hotspot=war file=1]`archiveVersion` property to an empty string for the `war` task and add properties for the `HTTP` port, `HTTPS` port, and the `context root` to the `build.gradle` file.
 
-* [hotspot=httpPort file=1]`liberty.server.var.'default.http.port'` to `9081`
-* [hotspot=httpsPort file=1]`liberty.server.var.'default.https.port'` to `9445`
-* [hotspot=contextRoot file=1]`liberty.server.var.'default.context.root'` to `/trial`
+* [hotspot=httpPort file=1]`liberty.var.http.port` to `9081`
+* [hotspot=httpsPort file=1]`liberty.var.https.port` to `9445`
+* [hotspot=contextRoot file=1]`liberty.var.context.root` to `/trial`
 
-Because you are using dev mode, these changes are automatically picked up by the server. After you see the following message, your application server in dev mode is ready again:
-
-[role="no_copy"]
-----
-**************************************************************
-*    Liberty is running in dev mode.
-----
+Because you are using dev mode, these changes are automatically picked up by the Liberty instance.
 
 ifndef::cloud-hosted[]
 Now, you can access the application by the http://localhost:9081/trial/api/systems URL. Alternatively, for the updated OpenAPI UI, use the following URL http://localhost:9081/openapi/ui/.
@@ -621,23 +610,27 @@ include::finish/module-config/build.gradle[]
 
 When you are finished trying out changing this configuration, change the variables back to their original values.
 
-* update [hotspot=httpPort file=2]`liberty.server.var.'default.http.port'` to `9080`
-* update [hotspot=httpsPort file=2]`liberty.server.var.'default.https.port'` to `9443`
-* update [hotspot=contextRoot file=2]`liberty.server.var.'default.context.root'` to `/inventory`
+* update [hotspot=httpPort file=2]`liberty.var.http.port` to `9080`
+* update [hotspot=httpsPort file=2]`liberty.var.https.port` to `9443`
+* update [hotspot=contextRoot file=2]`liberty.var.context.root` to `/inventory`.
 
-Wait until you see the following message:
-
-[role="no_copy"]
+[role='code_command hotspot file=2', subs="quotes"]
 ----
-**************************************************************
-*    Liberty is running in dev mode.
+#Replace the `build.gradle` file.#
+`build.gradle`
+----
+
+build.gradle
+[source, xml, linenums, role='code_column hide_tags=copyright']
+----
+include::finish/module-config/build.gradle[]
 ----
 
 === Injecting static configuration
 
 You can now explore how to use MicroProfile's Config API to inject static configuration into your microservice.
 
-The MicroProfile Config API is included in the MicroProfile dependency that is specified in your `build.gradle` file. Look for the dependency with the `microprofile` artifact ID. This dependency provides a library that allows the use of the MicroProfile Config API. The `microProfile` feature is also enabled in the `server.xml` file.
+The MicroProfile Config API is included in the MicroProfile dependency that is specified in your `build.gradle` file. Look for the dependency with the `microprofile` artifact ID. This dependency provides a library that allows the use of the MicroProfile Config API. The `microProfile` feature is also enabled in the `server.xml` configuration file.
 
 
 First, you need to edit the `SystemResource` class to inject static configuration into the `CLIENT_PORT` variable.
@@ -836,11 +829,11 @@ The persistence unit is defined by the [hotspot=persistence-unit file=0]`persist
 
 A JTA transaction type requires a JTA data source to be provided. The [hotspot=jta-data file=0]`jta-data-source` element specifies the Java Naming and Directory Interface (JNDI) name of the data source that is used. 
 
-Configure the `jdbc/postgresql` data source in the Liberty server configuration file.
+Configure the `jdbc/postgresql` data source in the Liberty `server.xml` configuration file.
 
 [role="code_command hotspot file=1", subs="quotes"]
 ----
-#Replace the `server.xml` configuration file.#
+#Replace the Liberty `server.xml` configuration file.#
 `src/main/liberty/config/server.xml`
 ----
 
@@ -851,19 +844,19 @@ server.xml
 include::finish/module-persisting-data/src/main/liberty/config/server.xml[]
 ----
 
-The [hotspot=postgresqlLibrary file=1]`library` element tells the Liberty server where to find the PostgreSQL library. The [hotspot=dataSource file=1]`dataSource` element points to where the Java Database Connectivity (JDBC) driver connects, along with some database vendor-specific properties. For more information, see the https://www.openliberty.io/docs/latest/relational-database-connections-JDBC.html#_data_source_configuration[Data source configuration^] and https://www.openliberty.io/docs/latest/reference/config/dataSource.html[dataSource element^] documentation.
+The [hotspot=postgresqlLibrary file=1]`library` element tells the Liberty where to find the PostgreSQL library. The [hotspot=dataSource file=1]`dataSource` element points to where the Java Database Connectivity (JDBC) driver connects, along with some database vendor-specific properties. For more information, see the https://www.openliberty.io/docs/latest/relational-database-connections-JDBC.html#_data_source_configuration[Data source configuration^] and https://www.openliberty.io/docs/latest/reference/config/dataSource.html[dataSource element^] documentation.
 
 To use a PostgreSQL database, you need to download its library and store it to the Liberty shared resources directory. Configure the Liberty Maven plug-in in the `build.gradle` file.
 
 [role='code_command hotspot file=2', subs="quotes"]
 ----
-#Replace the `build.gradle` file.#
+#Replace the `build.gradle` configuration file.#
 `build.gradle`
 ----
 
 // File 2
 build.gradle
-[source, gradle, linenums, role='code_column']
+[source, gradle, linenums, role='code_column hide_tags=copyright']
 ----
 include::finish/module-persisting-data/build.gradle[]
 ----
@@ -896,9 +889,9 @@ endif::[]
 === Running the application ===
 
 ifndef::cloud-hosted[]
-In your dev mode console for the `inventory` microservice, type `r` and press `enter/return` key to restart the server.
+In your dev mode console for the `inventory` microservice, type `r` and press `enter/return` key to restart the Liberty instance.
 
-After you see the following message, your application server in dev mode is ready again:
+After you see the following message, your Liberty instance is ready in dev mode again:
 
 [role="no_copy"]
 ----
@@ -921,9 +914,9 @@ Next, make a DELETE request to the `/api/systems/{hostname}` endpoint. To make t
 endif::[]
 
 ifdef::cloud-hosted[]
-In your dev mode console for the ***inventory*** microservice, type `r` and press ***enter/return*** key to restart the server.
+In your dev mode console for the ***inventory*** microservice, type `r` and press ***enter/return*** key to restart the Liberty instance.
 
-After you see the following message, your application server in dev mode is ready again:
+After you see the following message, your Liberty instance is ready in dev mode again:
 
 ```
 **************************************************************
@@ -945,7 +938,7 @@ curl -s 'http://localhost:9080/inventory/api/systems' | jq
 Next, make a PUT request to the ***/api/systems/{hostname}*** endpoint with the same value for the ***hostname*** path as in the previous step, and different values to the ***heapSize***, ***javaVersion***, and ***osName*** parameters. The PUT request updates the system with the specified values. 
 
 ```bash
-curl -X PUT 'http://localhost:9080/inventory/api/systems/localhost?heapSize=2097152&javaVersion=11&osName=linux'
+curl -X PUT 'http://localhost:9080/inventory/api/systems/localhost?heapSize=2097152&javaVersion=17&osName=linux'
 ```
 
 To see the updated system, make a GET request to the ***/api/systems/{hostname}*** endpoint with the same value for the ***hostname*** path as in the previous step. The GET request returns the system from the database.
@@ -983,11 +976,11 @@ cd /home/project/guide-liberty-deep-dive-gradle/start/inventory
 ```
 endif::[]
 
-Begin by adding some users and user groups to your `server.xml` Liberty configuration file.
+Begin by adding some users and user groups to your Liberty `server.xml` configuration file.
 
 [role="code_command hotspot file=0", subs="quotes"]
 ----
-#Replace the `server.xml` file.#
+#Replace the Liberty `server.xml` configuration file.#
 `src/main/liberty/config/server.xml`
 ----
 
@@ -1038,7 +1031,7 @@ Before making requests, you must add a system to the inventory. Try adding a sys
 
 [role='command']
 ----
-curl -X POST "http://localhost:9080/inventory/api/systems?hostname=localhost&osName=mac&javaVersion=11&heapSize=1"
+curl -X POST 'http://localhost:9080/inventory/api/systems?hostname=localhost&osName=mac&javaVersion=17&heapSize=1'
 ----
 
 You can expect the following response:
@@ -1053,7 +1046,7 @@ This command calls the `/systems` endpoint and adds a system `localhost` to the 
 ifndef::cloud-hosted[]
 [role='command']
 ----
-curl -s "http://localhost:9080/inventory/api/systems"
+curl -s 'http://localhost:9080/inventory/api/systems'
 ----
 endif::[]
 
@@ -1067,14 +1060,14 @@ You can now expect the following response:
 
 [source, role=no_copy]
 ----
-[{"heapSize":1,"hostname":"localhost","javaVersion":"11","osName":"mac","id":23}]
+[{"heapSize":1,"hostname":"localhost","javaVersion":"17","osName":"mac","id":23}]
 ----
 
 Now try calling your secure PUT endpoint to update the system that you just added by the following curl command:
 
 [role='command']
 ----
-curl -k --user alice:alicepwd -X PUT "http://localhost:9080/inventory/api/systems/localhost?heapSize=2097152&javaVersion=11&osName=linux"
+curl -k --user alice:alicepwd -X PUT 'http://localhost:9080/inventory/api/systems/localhost?heapSize=2097152&javaVersion=17&osName=linux'
 ----
 
 As this endpoint is accessible to the groups `user` and `admin`, you must log in with `user` credentials to update the system.
@@ -1094,7 +1087,14 @@ You can check that your application is secured against these requests with the f
 
 [role='command']
 ----
-curl -k --user alice:alicepwd -X DELETE "https://localhost:9443/inventory/api/systems/localhost"
+curl -kf --user alice:alicepwd -X DELETE 'https://localhost:9443/inventory/api/systems/localhost'
+----
+
+You should see the following response:
+
+[source, role=no_copy]
+----
+curl: (22) The requested URL returned error: 403
 ----
 
 As `alice` is part of the `user` group, this request cannot work. In your dev mode console, you can expect the following output:
@@ -1108,7 +1108,7 @@ Now attempt to call this endpoint with an authenticated `admin` user that can wo
 
 [role='command']
 ----
-curl -k --user bob:bobpwd -X DELETE "https://localhost:9443/inventory/api/systems/localhost"
+curl -k --user bob:bobpwd -X DELETE 'https://localhost:9443/inventory/api/systems/localhost'
 ----
 
 You can expect to see the following response:
@@ -1122,7 +1122,7 @@ This response means that your endpoint is secure. Validate that it works correct
 
 [role='command']
 ----
-curl "http://localhost:9080/inventory/api/systems"
+curl 'http://localhost:9080/inventory/api/systems'
 ----
 
 You can expect to see the following output:
@@ -1239,11 +1239,11 @@ A JWT instance is injected to the [hotspot=jwt file=0]`jwt` field variable by th
 
 === Configuring the JSON Web Token
 
-Next, add the JSON Web Token (Single Sign On) feature to the server configuration file for the `inventory` service.
+Next, add the JSON Web Token (Single Sign On) feature to the Liberty `server.xml` configuration file for the `inventory` service.
 
 [role="code_command hotspot file=0", subs="quotes"]
 ----
-#Replace the `server.xml` file.#
+#Replace the Liberty `server.xml` configuration file.#
 `src/main/liberty/config/server.xml`
 ----
 
@@ -1261,9 +1261,11 @@ microprofile-config.properties
 include::finish/system/src/main/webapp/META-INF/microprofile-config.properties[]
 ----
 
-The [hotspot=jwtSsoFeature file=0]`jwtSso` feature adds the libraries that are required for JWT SSO implementation. Configure the [hotspot=jwtSsoConfig file=0]`jwtSso` feature by adding the [hotspot=jwtBuilder file=0]`jwtBuilder` configuration to your `server.xml`. Also, configure the MicroProfile [hotspot=mpJwt file=0]`JWT` with the `audiences` and `issuer` properties that match the [hotspot file=1]`microprofile-config.properties` defined at the `system/src/main/webapp/META-INF` directory under the `system` project. For more information, see the https://www.openliberty.io/docs/latest/reference/feature/jwtSso-1.0.html[JSON Web Token Single Sign-On feature^], https://www.openliberty.io/docs/latest/reference/config/jwtSso.html[jwtSso element^], and https://www.openliberty.io/docs/latest/reference/config/jwtBuilder.html[jwtBuilder element^] documentation.
+The [hotspot=jwtSsoFeature file=0]`jwtSso` feature adds the libraries that are required for JWT SSO implementation. Configure the [hotspot=jwtSsoConfig file=0]`jwtSso` feature by adding the [hotspot=jwtBuilder file=0]`jwtBuilder` configuration to your `server.xml` file. Also, configure the MicroProfile [hotspot=mpJwt file=0]`JWT` with the `audiences` and `issuer` properties that match the [hotspot file=1]`microprofile-config.properties` defined at the `system/src/main/webapp/META-INF` directory under the `system` project. For more information, see the https://www.openliberty.io/docs/latest/reference/feature/jwtSso-1.0.html[JSON Web Token Single Sign-On feature^], https://www.openliberty.io/docs/latest/reference/config/jwtSso.html[jwtSso element^], and https://www.openliberty.io/docs/latest/reference/config/jwtBuilder.html[jwtBuilder element^] documentation.
 
-The [hotspot=keyStore file=0]`keyStore` element is used to define the repository of security certificates used for SSL encryption. The `id` attribute is a unique configuration ID that is set to `defaultKeyStore`. The `password` attribute is used to load the keystore file, and its value can be stored in clear text or encoded form. To learn more about other attributes, see the https://openliberty.io/docs/latest/reference/config/keyStore.html#keyStore.html[keyStore^] attribute documentation. 
+The [hotspot=keyStore file=0]`keyStore` element is used to define the repository of security certificates used for SSL encryption. The `id` attribute is a unique configuration ID that is set to `guideKeyStore`. The `password` attribute is used to load the keystore file, and its value can be stored in clear text or encoded form. To learn more about other attributes, see the https://openliberty.io/docs/latest/reference/config/keyStore.html#keyStore.html[keyStore attribute documentation^].
+
+To avoid the conflict with the default ssl configuration, define your own ssl configuration by setting the [hotspot=ssl file=0]`id` attribute to other value, the [hotspot=sslDefault file=0]`sslDefault` element, and the [hotspot=mpJwt file=0]`sslRef` attribute in the `mpJwt` element.
 
 Because the keystore file is not provided at the `src` directory, Liberty creates a Public Key Cryptography Standards #12 (PKCS12) keystore file for you by default. This file needs to be replaced, as the [hotspot=keyStore file=0]`keyStore` configuration must be the same in both `system` and `inventory` microservices. As the configured `system` microservice is already provided for you, copy the `key.p12` keystore file from the `system` microservice to your `inventory` service.
 
@@ -1306,14 +1308,14 @@ Now configure the client https port in the `build.gradle` configuration file.
 
 // File 2
 build.gradle
-[source, gradle, linenums, role='code_column']
+[source, gradle, linenums, role='code_column hide_tags=copyright']
 ----
 include::finish/module-jwt/build.gradle[]
 ----
 
-Configure the client https port by setting the [hotspot=https file=2]`liberty.server.var.'client.https.port'` to `9444`.
+Configure the client https port by setting the [hotspot=https file=2]`<liberty.var.client.https.port>` to `9444`.
 
-In your dev mode console for the `inventory` microservice, press `CTRL+C` to stop the server. Then, restart the dev mode of the `inventory` microservice.
+In your dev mode console for the `inventory` microservice, press `CTRL+C` to stop the Liberty instance. Then, restart the dev mode of the `inventory` microservice.
 
 include::{common-includes}/os-tabs.adoc[]
 [.tab_content.windows_section]
@@ -1332,7 +1334,7 @@ gradlew libertyDev
 ```
 --
 
-After you see the following message, your application server in dev mode is ready again:
+After you see the following message, your Liberty instance is ready in dev mode again:
 
 [role="no_copy"]
 ----
@@ -1378,14 +1380,21 @@ Wait until the following message displays on the `system` microservice console.
 CWWKF0011I: The defaultServer server is ready to run a smarter planet. ...
 ----
 
-You can check that the `system` microservice is secured against unauthenticated requests at the https://localhost:9444/system/api/heapsize URL. You can expect to see the following error in the console of the `system` microservice:
+You can check that the `system` microservice is secured against unauthenticated requests at the https://localhost:9444/system/api/heapsize URL. Open another command-line session and run the following command:
 
-ifdef::cloud-hosted[]
-Open another command-line session and run the following command:
-```bash
-curl -k 'https://localhost:9444/system/api/heapsize'
-```
-endif::[]
+[role='command']
+----
+curl -kf 'https://localhost:9444/system/api/heapsize'
+----
+
+You should see the following response:
+
+[source, role=no_copy]
+----
+curl: (22) The requested URL returned error: 401
+----
+
+You can expect to see the following error in the console of the `system` microservice:
 
 [source]
 ----
@@ -1399,7 +1408,7 @@ As this endpoint is restricted to `admin`, you can use the login credentials for
 
 [role='command']
 ----
-curl -k --user bob:bobpwd -X POST "https://localhost:9443/inventory/api/systems/client/localhost"
+curl -k --user bob:bobpwd -X POST 'https://localhost:9443/inventory/api/systems/client/localhost'
 ----
 
 You can expect the following output:
@@ -1414,7 +1423,7 @@ You can verify that this endpoint works as expected by running the following com
 ifndef::cloud-hosted[]
 [role='command']
 ----
-curl "http://localhost:9080/inventory/api/systems"
+curl 'http://localhost:9080/inventory/api/systems'
 ----
 endif::[]
 
@@ -1433,7 +1442,7 @@ You can expect to see your system listed in the output.
     "heapSize": 2999975936,
     "hostname": "localhost",
     "id": 11,
-    "javaVersion": "11.0.11",
+    "javaVersion": "17.0.9",
     "osName": "Linux"
   }
 ]
@@ -1583,7 +1592,7 @@ Enable the `bob` user to access the `/metrics` endpoints.
 
 [role="code_command hotspot file=0", subs="quotes"]
 ----
-#Replace the `server.xml` file.#
+#Replace the Liberty `server.xml` configuration file.#
 `src/main/liberty/config/server.xml`
 ----
 
@@ -1613,7 +1622,7 @@ include::finish/module-metrics/src/main/java/io/openliberty/deepdive/rest/System
 
 Import the [hotspot=metricsImport file=1]`Counted` annotation and apply it to the [hotspot=metricsAddSystem file=1]`POST /api/systems`, [hotspot=metricsUpdateSystem file=1]`PUT /api/systems/{hostname}`, [hotspot=metricsRemoveSystem file=1]`DELETE /api/systems/{hostname}`, and [hotspot=metricsAddSystemClient file=1]`POST /api/systems/client/{hostname}` endpoints to monotonically count how many times that the endpoints are accessed. 
 
-Additional information about the annotations that MicroProfile metrics provides, relevant metadata fields, and more are available at the https://openliberty.io/docs/latest/reference/javadoc/microprofile-6.0-javadoc.html?package=org/eclipse/microprofile/metrics/annotation/package-frame.html&class=overview-summary.html[MicroProfile Metrics Annotation Javadoc^].
+Additional information about the annotations that MicroProfile metrics provides, relevant metadata fields, and more are available at the https://openliberty.io/docs/latest/reference/javadoc/microprofile-6.1-javadoc.html?package=org/eclipse/microprofile/metrics/annotation/package-frame.html&class=overview-summary.html[MicroProfile Metrics Annotation Javadoc^].
 
 ifndef::cloud-hosted[]
 Point your browser to the http://localhost:9080/openapi/ui[^] URL to try out your application and call some of the endpoints that you annotated.
@@ -1633,7 +1642,7 @@ curl -X POST 'http://localhost:9080/inventory/api/systems?heapSize=1048576&hostn
 
 ```bash
 curl -k --user alice:alicepwd -X PUT \
-  'http://localhost:9080/inventory/api/systems/localhost?heapSize=2097152&javaVersion=11&osName=linux'
+  'http://localhost:9080/inventory/api/systems/localhost?heapSize=2097152&javaVersion=17&osName=linux'
 ```
 
 ```bash
@@ -1676,24 +1685,24 @@ endif::[]
 ifdef::cloud-hosted[]
 Run the following curl command to see the application metrics that are enabled through MicroProfile Metrics:
 ```bash
-curl -k --user bob:bobpwd https://localhost:9443/metrics\?scope=application
+curl -k --user bob:bobpwd https://localhost:9443/metrics?scope=application
 ```
 
 You can expect to see your application metrics in text format as the following output:
 
 ```
-# TYPE application_addSystemClient_total counter
-# HELP application_addSystemClient_total Number of times adding a system by client is called
-application_addSystemClient_total 0
-# TYPE application_addSystem_total counter
-# HELP application_addSystem_total Number of times adding system endpoint is called
-application_addSystem_total 1
-# TYPE application_updateSystem_total counter
-# HELP application_updateSystem_total Number of times updating a system endpoint is called
-application_updateSystem_total 1
-# TYPE application_removeSystem_total counter
-# HELP application_removeSystem_total Number of times removing a system endpoint is called
-application_removeSystem_total 1
+# HELP updateSystem_total Number of times updating a system endpoint is called
+# TYPE updateSystem_total counter
+updateSystem_total{mp_scope="application",} 1.0
+# HELP removeSystem_total Number of times removing a system endpoint is called
+# TYPE removeSystem_total counter
+removeSystem_total{mp_scope="application",} 1.0
+# HELP addSystemClient_total Number of times adding a system by client is called
+# TYPE addSystemClient_total counter
+addSystemClient_total{mp_scope="application",} 0.0
+# HELP addSystem_total Number of times adding system endpoint is called
+# TYPE addSystem_total counter
+addSystem_total{mp_scope="application",} 1.0
 ```
 
 To see the system metrics, run the following curl command:
@@ -1748,17 +1757,19 @@ Containerfile
 include::finish/module-kubernetes/Containerfile[]
 ----
 
-The [hotspot=from file=0]`FROM` instruction initializes a new build stage and indicates the parent image from which your image is built. In this case, you’re using the `icr.io/appcafe/open-liberty:full-java11-openj9-ubi` image that comes with the latest Open Liberty runtime as your parent image.
+The [hotspot=from file=0]`FROM` instruction initializes a new build stage and indicates the parent image from which your image is built. In this case, you’re using the `icr.io/appcafe/open-liberty:full-java17-openj9-ubi` image that comes with the latest Open Liberty runtime as your parent image.
 
 To help you manage your images, you can label your container images with the [hotspot=label file=0]`LABEL` command. 
 
-The [hotspot=copy file=0]`COPY` instructions are structured as `COPY` `[--chown=<user>:<group>]` `<source>` `<destination>`. They copy local files into the specified destination within your container  image. In this case, the first [hotspot=copy-config file=0]`COPY` instruction copies the server configuration file that is at `src/main/liberty/config/server.xml` to the `/config/` destination directory. Similarly, the second [hotspot=copy-war file=0]`COPY` instruction copies the `.war` file to the `/config/apps` destination directory. The third [hotspot=copy-jar file=0]`COPY` instruction copies the PostgreSQL library file to the Liberty shared resources directory.
+The [hotspot=copy file=0]`COPY` instructions are structured as `COPY` `[--chown=<user>:<group>]` `<source>` `<destination>`. They copy local files into the specified destination within your container  image. In this case, the first [hotspot=copy-config file=0]`COPY` instruction copies the Liberty  configuration file that is at `src/main/liberty/config/server.xml` to the `/config/` destination directory. Similarly, the second [hotspot=copy-war file=0]`COPY` instruction copies the `.war` file to the `/config/apps` destination directory. The third [hotspot=copy-jar file=0]`COPY` instruction copies the PostgreSQL library file to the Liberty shared resources directory.
 
-Next, make the PostgreSQL database configurable in the Liberty server configuraton file.
+=== Developing the application in a container
 
-[role='code_command hotspot file=1', subs="quotes"]
+Make the PostgreSQL database configurable in the Liberty `server.xml` configuraton file.
+
+[role='code_command hotspot file=0', subs="quotes"]
 ----
-#Replace the `server.xml` file.#
+#Replace the Liberty `server.xml` configuration file.#
 `src/main/liberty/config/server.xml`
 ----
 
@@ -1768,7 +1779,7 @@ server.xml
 include::finish/module-kubernetes/src/main/liberty/config/server.xml[]
 ----
 
-Instead of the hard-coded `serverName`, `portNumber`, `user`, and `password` values in the [hotspot=postgresProperties file=1]`properties.postgresql` properties, use `${postgres/hostname}`, `${postgres/portnum}`, `${postgres/username}`, and `${postgres/password}`, which are defined by the [hotspot=variables file=1]`variable` elements.
+Instead of the hard-coded `serverName`, `portNumber`, `user`, and `password` values in the [hotspot=postgresProperties file=0]`properties.postgresql` properties, use `${postgres/hostname}`, `${postgres/portnum}`, `${postgres/username}`, and `${postgres/password}`, which are defined by the [hotspot=variables file=0]`variable` elements.
 
 === Building the container image
 
@@ -1822,77 +1833,655 @@ podman images
 Verify that the `liberty-deepdive-inventory:1.0-SNAPSHOT` image is listed among the container images, for example:
 [source, role="no_copy"]
 ----
-REPOSITORY                             TAG
-localhost/liberty-deepdive-inventory   1.0-SNAPSHOT
-icr.io/appcafe/open-liberty            full-java11-openj9-ubi
+REPOSITORY                       TAG
+liberty-deepdive-inventory       1.0-SNAPSHOT
+icr.io/appcafe/open-liberty      full-java17-openj9-ubi
+----
+== Testing the microservice with Testcontainers
+
+Although you can test your microservice manually, you should rely on automated tests. In this section, you can learn how to use Testcontainers to verify your microservice in the same Docker container that you’ll use in production.
+
+First, create the `test` directory at the `src` directory of your Gradle project.
+
+ifndef::cloud-hosted[]
+[.tab_link.windows_link]
+`*WINDOWS*`
+[.tab_link.mac_link]
+`*MAC*`
+[.tab_link.linux_link]
+`*LINUX*`
+
+[.tab_content.windows_section]
+--
+[role='command']
+```
+mkdir src\test\java\it\io\openliberty\deepdive\rest
+mkdir src\test\resources
+```
+--
+
+[.tab_content.mac_section.linux_section]
+--
+[role='command']
+```
+mkdir -p src/test/java/it/io/openliberty/deepdive/rest
+mkdir src/test/resources
+```
+--
+endif::[]
+
+ifdef::cloud-hosted[]
+```bash
+mkdir -p /home/project/guide-liberty-deep-dive-gradle/start/inventory/src/test/java/it/io/openliberty/deepdive/rest
+mkdir /home/project/guide-liberty-deep-dive-gradle/start/inventory/src/test/resources
+```
+endif::[]
+
+Create a RESTful client interface for the `inventory` microservice.
+
+[role="code_command hotspot file=0", subs="quotes"]
+----
+#Create the `SystemResourceClient.java` file.#
+`src/test/java/it/io/openliberty/deepdive/rest/SystemResourceClient.java`
+----
+
+// File 0
+SystemResourceClient.java
+[source, java, linenums, role='code_column hide_tags=copyright']
+----
+include::finish/module-testcontainers/src/test/java/it/io/openliberty/deepdive/rest/SystemResourceClient.java[]
+----
+
+This interface declares [hotspot=listContents file=0]`listContents()`, [hotspot=getSystem file=0]`getSystem()`, [hotspot=addSystem file=0]`addSystem()`, [hotspot=updateSystem file=0]`updateSystem()`, and [hotspot=removeSystem file=0]`removeSystem()` methods for accessing each of the endpoints that are set up to access the `inventory` microservice. 
+
+
+Create the `SystemData` data model for each system in the inventory.
+
+[role="code_command hotspot file=1", subs="quotes"]
+----
+#Create the `SystemData.java` file.#
+`src/test/java/it/io/openliberty/deepdive/rest/SystemData.java`
+----
+
+// File 1
+SystemData.java
+[source, java, linenums, role='code_column hide_tags=copyright']
+----
+include::finish/module-testcontainers/src/test/java/it/io/openliberty/deepdive/rest/SystemData.java[]
+----
+
+The [hotspot=fields file=1]`SystemData` class contains the ID, hostname, operating system name, Java version, and heap size properties. The various [hotspot=getMethods file=1]`get` and [hotspot=setMethods file=1]`set` methods within this class enable you to view and edit the properties of each system in the inventory.
+
+Create the test container class that access the `inventory` docker image that you built in previous section.
+
+[role="code_command hotspot file=2", subs="quotes"]
+----
+#Create the `LibertyContainer.java` file.#
+`src/test/java/it/io/openliberty/deepdive/rest/LibertyContainer.java`
+----
+
+// File 2
+LibertyContainer.java
+[source, java, linenums, role='code_column hide_tags=copyright']
+----
+include::finish/module-testcontainers/src/test/java/it/io/openliberty/deepdive/rest/LibertyContainer.java[]
+----
+
+The [hotspot=createRestClient file=2]`createRestClient()` method creates a REST client instance with the `SystemResourceClient` interface. The [hotspot=getBaseURL file=2]`getBaseURL()` method constructs the URL that can access the `inventory` docker image.
+
+Now, you can create your integration test cases.
+
+[role="code_command hotspot file=3", subs="quotes"]
+----
+#Create the `SystemResourceIT.java` file.#
+`src/test/java/it/io/openliberty/deepdive/rest/SystemResourceIT.java`
+----
+
+// File 3
+SystemResourceIT.java
+[source, java, linenums, role='code_column hide_tags=copyright']
+----
+include::finish/module-testcontainers/src/test/java/it/io/openliberty/deepdive/rest/SystemResourceIT.java[]
+----
+
+Define the [hotspot=postgresSetup file=3]`postgresContainer` test container to start up the PostgreSQL docker image, and define the [hotspot=libertySetup file=3]`libertyContainer` test container to start up the `inventory` docker image. Make sure that both containers use the same [hotspot=network hotspot=pNetwork hotspot=lNetwork file=3]`network`. The [hotspot=health file=3]`/health/ready` endpoint can tell you whether the container is ready to start testing.
+
+The [hotspot=testAddSystem file=3]`testAddSystem()` verifies the [hotspot=addSystem file=3]`addSystem` and [hotspot=listContents file=3]`listContents` endpoints.
+
+The [hotspot=testUpdateSystem file=3]`testUpdateSystem()` verifies the [hotspot=updateSystem file=3]`updateSystem` and [hotspot=getSystem file=3]`getSystem` endpoints.
+
+The [hotspot=testRemoveSystem file=3]`testRemoveSystem()` verifies the [hotspot=removeSystem file=3]`removeSystem` endpoint.
+
+
+Create the log4j properites that are required by the Testcontainers framework.
+
+[role="code_command hotspot file=4", subs="quotes"]
+----
+#Create the `log4j.properties` file.#
+`src/test/resources/log4j.properties`
+----
+
+// File 4
+log4j.properties
+[source, text, linenums, role='code_column hide_tags=copyright']
+----
+include::finish/module-testcontainers/src/test/resources/log4j.properties[]
+----
+
+Update the Gradle configuration file with the required dependencies.
+
+[role="code_command hotspot file=5", subs="quotes"]
+----
+#Replace the `build.gradle` file.#
+`build.gradle`
+----
+
+// File 5
+build.gradle
+[source, gradle, linenums, role='code_column hide_tags=copyright']
+----
+include::finish/module-testcontainers/build.gradle[]
+----
+
+Add each required [hotspot=testDependenies file=5]`dependency` with `test` scope, including JUnit5, Testcontainers, Log4J, JBoss RESTEasy client, Glassfish JSON, and Vert.x libraries. Also, add the [hotspot=failsafe file=5]`io.openliberty.tools.gradle.Liberty` plugin, so that the integration test can be run by the Gradle `verify` goal.
+
+=== Running the tests
+
+You can run the Gradle `verify` goal, which compiles the java files, starts the containers, runs the tests, and then stops the containers.
+
+ifndef::cloud-hosted[]
+[.tab_link.windows_link]
+`*WINDOWS*`
+[.tab_link.mac_link]
+`*MAC*`
+[.tab_link.linux_link]
+`*LINUX*`
+
+[.tab_content.windows_section]
+--
+[role='command']
+```
+gradlew verify
+```
+--
+
+[.tab_content.mac_section]
+--
+[role='command']
+```
+.\gradlew verify
+```
+--
+
+[.tab_content.linux_section]
+--
+[role='command']
+```
+export TESTCONTAINERS_RYUK_DISABLED=true
+mvn verify
+```
+--
+endif::[]
+
+ifdef::cloud-hosted[]
+In this Skills Network environment, you can test the HTTP protcol only.
+```bash
+export TESTCONTAINERS_RYUK_DISABLED=true
+./gradlew verify
+```
+endif::[]
+
+
+You will see the following output:
+
+[source,role="no_copy"]
+----
+-------------------------------------------------------
+ T E S T S
+-------------------------------------------------------
+Running it.io.openliberty.deepdive.rest.SystemResourceIT
+...
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 17.413 s - in it.io.openliberty.deepdive.rest.SystemResourceIT
+
+Results :
+
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
 ----
 
 
-=== Running the application in container
+// Starting and preparing your cluster for deployment
+ifndef::cloud-hosted[]
+== Starting and preparing your cluster for deployment
 
-Now that the `inventory` container image is built, you will run the application in container with the PostgreSQL container IP address.
+If you are using Linux, you can continue this section.
 
-Retrieve the PostgreSQL container IP address by running the following command:
+Start your Kubernetes cluster.
+
+Run the following command from a command-line session:
+
+[role=command]
+```
+minikube start
+```
+
+Next, validate that you have a healthy Kubernetes environment by running the following command from the active command-line session.
+
+[role=command]
+```
+kubectl get nodes
+```
+
+This command should return a `Ready` status for the `minikube` node.
+
+Run the following command to configure the Docker CLI to use Minikube's Docker daemon.
+After you run this command, you will be able to interact with Minikube's Docker daemon and build new
+images directly to it from your host machine:
+
+[role=command]
+```
+eval $(minikube docker-env)
+```
+
+Rebuild your Docker image under Minikube with the following commands:
 
 [role='command']
 ```
-podman inspect -f "{{.NetworkSettings.IPAddress }}" postgres-container
+docker build -t liberty-deepdive-inventory:1.0-SNAPSHOT .
+```
+endif::[]
+
+== Deploying the microservice to Kubernetes
+
+ifndef::cloud-hosted[]
+If you are using Linux, you can continue this section.
+endif::[]
+
+Now that the containerized application is built and tested, deploy it to a local Kubernetes cluster. 
+
+=== Installing the Open Liberty Operator 
+
+ifndef::cloud-hosted[]
+Install the Open Liberty Operator to deploy the microservice to Kubernetes.
+
+First, install the `cert-manager` to your Kubernetes cluster by running the following command:
+[role='command']
+```
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.12.3/cert-manager.yaml
 ```
 
-The command returns the PostgreSQL container IP address:
+Next, install Custom Resource Definitions (CRDs) for the Open Liberty Operator by running the following command:
+[role='command']
+```
+kubectl apply --server-side -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/1.2.1/kubectl/openliberty-app-crd.yaml
+```
+Custom Resources extend the Kubernetes API and enhance its functionality.
+
+Set environment variables for namespaces for the Open Liberty Operator by running the following commands:
+
+[role='command']
+```
+OPERATOR_NAMESPACE=default
+WATCH_NAMESPACE='""'
+```
+
+Next, run the following commands to install cluster-level role-based access:
+
+[role='command']
+```
+curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/1.2.1/kubectl/openliberty-app-rbac-watch-all.yaml \
+  | sed -e "s/OPEN_LIBERTY_OPERATOR_NAMESPACE/${OPERATOR_NAMESPACE}/" \
+  | kubectl apply -f -
+```
+
+Finally, run the following commands to install the Operator:
+
+[role='command']
+```
+curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/1.2.1/kubectl/openliberty-app-operator.yaml \
+  | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
+  | kubectl apply -n ${OPERATOR_NAMESPACE} -f -
+```
+endif::[]
+
+ifdef::cloud-hosted[]
+In this Skills Network environment, the Open Liberty Operator is already installed by the administrator. If you would like to learn how to install the Open Liberty Operator, see the [Deploying a microservice to Kubernetes by using Open Liberty Operator](https://openliberty.io/guides/openliberty-operator-intro.html) guide or the Open Liberty Operator [documentation](https://github.com/OpenLiberty/open-liberty-operator/tree/main/deploy/releases/1.2.1#readme).
+endif::[]
+
+To check that the Open Liberty Operator is installed successfully, run the following command to view all the supported API resources that are available through the Open Liberty Operator:
+
+[role='command']
+```
+kubectl api-resources --api-group=apps.openliberty.io
+```
+
+Look for the following output, which shows the https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/[custom resource definitions^] (CRDs) that can be used by the Open Liberty Operator:
+
+[role='no_copy']
+```
+NAME                      SHORTNAMES         APIGROUP              NAMESPACED   KIND
+openlibertyapplications   olapp,olapps       apps.openliberty.io   true         OpenLibertyApplication
+openlibertydumps          oldump,oldumps     apps.openliberty.io   true         OpenLibertyDump
+openlibertytraces         oltrace,oltraces   apps.openliberty.io   true         OpenLibertyTrace
+```
+
+Each CRD defines a kind of object that can be used, which is specified in the previous example by the `KIND` value. The `SHORTNAME` value specifies alternative names that you can substitute in the configuration to refer to an object kind. For example, you can refer to the `OpenLibertyApplication` object kind by one of its specified shortnames, such as `olapps`. 
+
+The `openlibertyapplications` CRD defines a set of configurations for deploying an Open Liberty-based application, including the application image, number of instances, and storage settings. The Open Liberty Operator watches for changes to instances of the `OpenLibertyApplication` object kind and creates Kubernetes resources that are based on the configuration that is defined in the CRD.
+
+=== Deploying the container image
+
+
+[role="code_command hotspot file=0",subs="quotes"]
+----
+#Create the `inventory.yaml` in the `start/inventory` directory.#
+`inventory.yaml`
+----
+
+// File 0
+inventory.yaml
+[source, yaml, linenums, role='code_column']
+----
+include::finish/module-kubernetes/inventory.init.yaml[]
+----
+
+In the [hotspot file=0]`inventory.yaml` file, the custom resource (CR) is specified to be [hotspot=kind file=0]`OpenLibertyApplication`. The CR triggers the Open Liberty Operator to create, update, or delete Kubernetes resources that are needed by the application to run on your cluster. Additionally, the [hotspot=applicationImage file=0]`applicationImage` field must be specified and set to the image that was created in the previous module. 
+
+// File 1
+postgres.yaml
+[source, yaml, linenums, role='code_column']
+----
+include::finish/postgres/postgres.yaml[]
+----
+
+Similarly, a Kubernetes resource definition is provided in the [hotspot file=1]`postgres.yaml` file at the `finish/postgres` directory. In the `postgres.yaml` file, the deployment for the PostgreSQL database is defined. 
+
+// The [hotspot=deployment file=1]`Deployment` definition acts to deploy the necessary Kubernetes resources to serve the database. Finally, the [hotspot=service file=1]`Service` definition exposes the PostgreSQL service on a cluster-internal IP, so that the inventory service can make requests to it.
+
+Create a Kubernetes Secret to configure the credentials for the `admin` user to access the database.
+[role='command']
+```
+kubectl create secret generic post-app-credentials --from-literal username=admin --from-literal password=adminpwd
+```
+
+The credentials are passed to the PostgreSQL database service as environment variables in the [hotspot=env file=1]`env` field.
+
+ifndef::cloud-hosted[]
+Run the following command to deploy the application and database:
+[role='command']
+```
+kubectl apply -f ../../finish/postgres/postgres.yaml
+kubectl apply -f inventory.yaml
+```
+endif::[]
+
+ifdef::cloud-hosted[]
+To deploy the **inventory** microservice and ***Postgres*** database in this Skills Network environment, you need to update the image name so that the image in your IBM Cloud container registry is used, and add the **pullSecret** and ***pullPolicy*** settings. Run the following commands:
+
+```bash
+sed -i 's=namespace: default=namespace: '"$SN_ICR_NAMESPACE"'=g' /home/project/guide-liberty-deep-dive-gradle/finish/postgres/postgres.yaml
+kubectl apply -f /home/project/guide-liberty-deep-dive-gradle/finish/postgres/postgres.yaml
+sed -i 's=liberty-deepdive-inventory:1.0-SNAPSHOT=us.icr.io/'"$SN_ICR_NAMESPACE"'/liberty-deepdive--inventory:1.0-SNAPSHOT\n  pullPolicy: Always\n  pullSecret: icr=g' /home/project/guide-liberty-deep-dive-gradle/start/inventory/inventory.yaml
+kubectl apply -f /home/project/guide-liberty-deep-dive-gradle/start/inventory/inventory.yaml
+```
+endif::[]
+
+When your pods are deployed, run the following command to check their status:
+[role='command']
+```
+kubectl get pods
+```
+
+If all the pods are working correctly, you see an output similar to the following example:
 
 [role="no_copy"]
 ----
-10.88.0.10
+NAME                                    READY   STATUS    RESTARTS   AGE
+inventory-deployment-75f9dc56d9-g9lzl   1/1     Running   0          35s
+postgres-58bd9b55c7-6vzz8               1/1     Running   0          13s
+olo-controller-manager-6fc6b456dc-s29wl 1/1     Running   0          10m
 ----
 
-Run the container with the PostgreSQL container IP address. If your PostgreSQL container IP address is not `10.88.0.10`, replace the command with the right IP address.
+Pause briefly to give the inventory service time to initialize. After it has started, use the following command to configure port forwarding to access the `inventory` microservice:
 
 [role='command']
 ```
-podman run -d --name inventory -p 9080:9080 -e POSTGRES_HOSTNAME=10.88.0.10 liberty-deepdive-inventory:1.0-SNAPSHOT
+kubectl port-forward svc/inventory-deployment 9443
 ```
 
-The following table describes the flags in this command: 
+The `port-forward` command pauses the command-line session until you press **Ctrl+C** after you try out the microservice.
 
-[cols="15, 100", options="header"]
-|===
-| *Flag* | *Description*
-| -d     | Runs the container in the background.
-| --name | Specifies a name for the container.
-| -p     | Maps the host ports to the container ports. For example: `-p <HOST_PORT>:<CONTAINER_PORT>`
-| -e     | Sets environment variables within the container. For example: `-e <VARIABLE_NAME>=<value>`
-|===
+ifndef::cloud-hosted[]
+The application might take some time to get ready. See the https://localhost:9443/health URL to confirm that the `inventory` microservice is up and running.
 
-Next, run the `podman ps` command to verify that your container is started:
-
+Once your application is up and running, you can check out the service at the https://localhost:9443/openapi/ui/[https://localhost:9443/openapi/ui/^] URL. The servers dropdown list shows the `\https://localhost:9443/inventory` URL. Or, you can run the following command to access the inventory microservice:
 [role='command']
 ```
-podman ps
+curl -k https://localhost:9443/inventory/api/systems
+```
+endif::[]
+
+ifdef::cloud-hosted[]
+The application might take some time to get ready. To confirm that the ***inventory*** microservice is up and running, run the following curl command:
+
+```bash
+curl -k https://localhost:9443/health | jq
 ```
 
-Make sure that your container is running and show `Up` as their status:
+If the application is up and running, you are ready to access the microservice.
+In another command-line session, access the microservice by running the following commands:
+
+```bash
+curl -k --user bob:bobpwd -X DELETE \
+  'https://localhost:9443/inventory/api/systems/localhost'
+```
+
+```bash
+curl -k -X POST 'https://localhost:9443/inventory/api/systems?heapSize=1048576&hostname=localhost&javaVersion=9&osName=linux'
+```
+
+```bash
+curl -k --user alice:alicepwd -X PUT \
+  'https://localhost:9443/inventory/api/systems/localhost?heapSize=2097152&javaVersion=17&osName=linux'
+```
+
+```bash
+curl -k -s 'https://localhost:9443/inventory/api/systems' | jq
+```
+endif::[]
+
+
+When you're done trying out the microservice, press `CTRL+C` in the command line session where you ran the `kubectl port-forward` command to stop the port forwarding. Then, run the `kubectl delete` command to stop the `inventory` microservice.
+
+ifndef::cloud-hosted[]
+[role='command']
+```
+kubectl delete -f inventory.yaml
+```
+endif::[]
+
+ifdef::cloud-hosted[]
+```bash
+kubectl delete -f /home/project/guide-liberty-deep-dive-gradle/start/inventory/inventory.yaml
+```
+endif::[]
+
+=== Customizing deployments
+
+// File 0
+server.xml
+[source, xml, linenums, role='code_column']
+----
+include::finish/module-kubernetes/src/main/liberty/config/server.xml[]
+----
+
+You can modify the inventory deployment to customize the service. Customizations for a service include changing the port number, changing the context root, and passing confidential information by using Secrets. 
+
+The [hotspot=contextRoot file=0]`context.root` variable is defined in the [hotspot file=0]`server.xml` configuration file. The context root for the inventory service can be changed by using this variable. The value for the [hotspot=contextRoot file=0]`context.root` variable can be defined in a `ConfigMap` and accessed as an environment variable.
+
+Create a ConfigMap to configure the app name with the following `kubectl` command.
+[role='command']
+```
+kubectl create configmap inv-app-root --from-literal contextRoot=/dev
+```
+This command deploys a ConfigMap named `inv-app-root` to your cluster. It has a key called `contextRoot` with a value of `/dev`. The `--from-literal` flag specifies individual key-value pairs to store in this ConfigMap. 
+
+
+[role="code_command hotspot file=1", subs="quotes"]
+----
+#Replace the `inventory.yaml` file.#
+`inventory.yaml`
+----
+
+// File 1
+inventory.yaml
+[source, yaml, linenums, role='code_column']
+----
+include::finish/module-kubernetes/inventory.yaml[]
+----
+
+During deployment, the `post-app-credentials` secret can be mounted to the [hotspot=mountPath file=1]`/config/variables/postgres` in the pod to create Liberty config variables. Liberty creates variables from the files in the [hotspot=mountPath file=1]`/config/variables/postgres` directory. Instead of including confidential information in the `server.xml` configuration file, users can access it using normal Liberty variable syntax, [hotspot=postgresUser file=0]`${postgres/username}` and [hotspot=postgresUser file=0]`${postgres/password}`.
+
+Run the following command to deploy your changes.
+ifndef::cloud-hosted[]
+[role='command']
+```
+kubectl apply -f inventory.yaml
+```
+endif::[]
+
+ifdef::cloud-hosted[]
+```bash
+sed -i 's=liberty-deepdive-inventory:1.0-SNAPSHOT=us.icr.io/'"$SN_ICR_NAMESPACE"'/liberty-deepdive-inventory:1.0-SNAPSHOT\n  pullPolicy: Always\n  pullSecret: icr=g' /home/project/guide-liberty-deep-dive-gradle/start/inventory/inventory.yaml
+kubectl apply -f /home/project/guide-liberty-deep-dive-gradle/start/inventory/inventory.yaml
+```
+endif::[]
+
+Run the following command to check your pods status:
+[role='command']
+```
+kubectl get pods
+```
+
+If all the pods are working correctly, you see an output similar to the following example:
 
 [role="no_copy"]
 ----
-CONTAINER ID    IMAGE                                              COMMAND                CREATED          STATUS          PORTS                                        NAMES
-2b584282e0f5    localhost/liberty-deepdive-inventory:1.0-SNAPSHOT  /opt/ol/wlp/bin/s...   8 seconds ago    Up 8 second     0.0.0.0:9080->9080/tcp   inventory
+NAME                                    READY   STATUS    RESTARTS   AGE
+inventory-deployment-75f9dc56d9-g9lzl   1/1     Running   0          35s
+postgres-58bd9b55c7-6vzz8               1/1     Running   0          13s
 ----
 
-If a problem occurs and your container exit prematurely, the container don't appear in the container
-list that the `podman ps` command displays. Instead, your container appear with an `Exited` status when you run the `podman ps -a` command. Run the `podman logs inventory` command to view the container logs for any potential problems. Run the `podman stats inventory` command to display a live stream of usage statistics for your container. You can also double-check that your `Containerfile` file is correct. When you find the cause of the issues, remove the faulty container with the `podman rm inventory` command. Rebuild your image, and start the container again.
-
-Now, you can access the application by the http://localhost:9080/inventory/api/systems URL. Alternatively, for the updated OpenAPI UI, use the following URL http://localhost:9080/openapi/ui/.
-
-When you’re finished trying out the application, run the following commands to stop the `inventory` container and the PostgreSQL container that was started in the previous section:
+Run the following command to set up port forwarding to access the `inventory` microservice:
 
 [role='command']
 ```
-podman stop inventory postgres-container
-podman rm inventory postgres-container
+kubectl port-forward svc/inventory-deployment 9443
 ```
 
-To learn how to optimize the image size, check out the https://openliberty.io/guides/containerize-podman.html#optimizing-the-image-size[Containerizing microservices with Podman guide^].
+ifndef::cloud-hosted[]
+The application might take some time to get ready. See the https://localhost:9443/health URL to confirm that the `inventory` microservice is up and running. You can now check out the service at the https://localhost:9443/openapi/ui/[https://localhost:9443/openapi/ui/^] URL. The servers dropdown list shows the `\https://localhost:9443/dev` URL. Or, you can run the following command to access the inventory microservice:
+[role='command']
+```
+curl -k https://localhost:9443/dev/api/systems
+```
+endif::[]
+
+ifdef::cloud-hosted[]
+The application might take some time to get ready. To confirm that the `inventory` microservice is up and running, run the following curl command in another command-line session:
+
+```bash
+curl -k https://localhost:9443/health | jq
+```
+
+If the application is up and running, you are ready to access the microservice.
+
+Access the microservice with the context root ***/dev*** by running the following commands:
+
+```bash
+curl -k --user bob:bobpwd -X DELETE \
+  'https://localhost:9443/dev/api/systems/localhost'
+```
+
+```bash
+curl -k -X POST 'https://localhost:9443/dev/api/systems?heapSize=1048576&hostname=localhost&javaVersion=9&osName=linux'
+```
+
+```bash
+curl -k --user alice:alicepwd -X PUT \
+  'https://localhost:9443/dev/api/systems/localhost?heapSize=2097152&javaVersion=17&osName=linux'
+```
+
+```bash
+curl -k -s 'https://localhost:9443/dev/api/systems' | jq
+```
+endif::[]
+
+=== Tearing down the environment 
+
+When you're finished trying out the microservice, press `CTRL+C` in the command-line session where you ran the `kubectl port-forward` command to stop the port forwarding. You can delete all Kubernetes resources by running the `kubectl delete` commands:
+
+ifndef::cloud-hosted[]
+[role='command']
+```
+kubectl delete -f inventory.yaml
+kubectl delete -f ../../finish/postgres/postgres.yaml
+kubectl delete configmap inv-app-root
+kubectl delete secret post-app-credentials
+```
+
+To uninstall the Open Liberty Operator, run the following commands:
+
+[role='command']
+```
+OPERATOR_NAMESPACE=default
+WATCH_NAMESPACE='""'
+
+curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/1.2.1/kubectl/openliberty-app-operator.yaml \
+  | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
+  | kubectl delete -n ${OPERATOR_NAMESPACE} -f -
+
+curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/1.2.1/kubectl/openliberty-app-rbac-watch-all.yaml \
+  | sed -e "s/OPEN_LIBERTY_OPERATOR_NAMESPACE/${OPERATOR_NAMESPACE}/" \
+  | kubectl delete -f -
+
+kubectl delete -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/1.2.1/kubectl/openliberty-app-crd.yaml
+
+kubectl delete -f https://github.com/cert-manager/cert-manager/releases/download/v1.12.3/cert-manager.yaml
+```
+
+
+Perform the following steps to stop your Kubernetes cluster and return your environment to a clean state.
+
+. Point the Docker daemon back to your local machine:
++
+[role=command]
+```
+eval $(minikube docker-env -u)
+```
+. Stop your Minikube cluster:
++
+[role=command]
+```
+minikube stop
+```
+
+. Delete your cluster:
++
+[role=command]
+```
+minikube delete
+```
+
+endif::[]
+
+ifdef::cloud-hosted[]
+```bash
+kubectl delete -f /home/project/guide-liberty-deep-dive-gradle/start/inventory/inventory.yaml
+kubectl delete -f /home/project/guide-liberty-deep-dive-gradle/finish/postgres/postgres.yaml
+kubectl delete configmap inv-app-root
+kubectl delete secret post-app-credentials
+```
+endif::[]
 
 
 == Support Licensing

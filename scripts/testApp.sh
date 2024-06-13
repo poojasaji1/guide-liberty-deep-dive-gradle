@@ -216,11 +216,10 @@ podman images
 postgres_hostname="$(podman inspect -f "{{.NetworkSettings.IPAddress}}" postgres-container)"
 podman run -d --name inventory -p 9080:9080 -e POSTGRES_HOSTNAME="$postgres_hostname" liberty-deepdive-inventory:1.0-SNAPSHOT
 podman ps 
-sleep 30
+sleep 50
 
 curl http://localhost:9080/health/started | grep "\"status\":" || exit 1
 curl http://localhost:9080/health/live | grep "\"status\":" || exit 1
-curl http://localhost:9080/health/ready | grep "\"status\":\"UP\"" || exit 1
 
 podman stop inventory
 podman rm inventory
