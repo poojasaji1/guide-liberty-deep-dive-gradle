@@ -9,6 +9,11 @@ done
 
 echo "Testing daily build image"
 
+if [ "$JDK_LEVEL" == "11" ]; then
+    echo "Test skipped because the guide does not support Java 11."
+    exit 0
+fi
+
 export RUNTIMEURL="liberty {\n    install {\n        runtimeUrl='https://public.dhe.ibm.com/ibmdl/export/pub/software/openliberty/runtime/nightly/$DATE/$DRIVER'\n    }\n}\n"
 
 sed -i "s;clean.dependsOn;$RUNTIMEURL\nclean.dependsOn;g" module-jwt/build.gradle module-getting-started/build.gradle system/build.gradle module-config/build.gradle module-securing/build.gradle module-openapi/build.gradle
