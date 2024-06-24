@@ -1,8 +1,9 @@
 #!/bin/bash
-while getopts t:d:b:u: flag; do
+while getopts t:d:j: flag; do
     case "${flag}" in
     t) DATE="${OPTARG}" ;;
     d) DRIVER="${OPTARG}" ;;
+    j) JDK_LEVEL="${OPTARG}" ;;
     *) echo "Invalid option" ;;
     esac
 done
@@ -35,4 +36,4 @@ cat module-kubernetes/Containerfile
 sed -i "s;95;999;g" module-health-checks/src/main/java/io/openliberty/deepdive/rest/health/StartupCheck.java
 cat module-health-checks/src/main/java/io/openliberty/deepdive/rest/health/StartupCheck.java
 
-sudo -u runner ../scripts/testApp.sh
+sudo -E ../scripts/testApp.sh
