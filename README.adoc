@@ -1781,6 +1781,79 @@ include::finish/module-kubernetes/src/main/liberty/config/server.xml[]
 
 Instead of the hard-coded `serverName`, `portNumber`, `user`, and `password` values in the [hotspot=postgresProperties file=0]`properties.postgresql` properties, use `${postgres/hostname}`, `${postgres/portnum}`, `${postgres/username}`, and `${postgres/password}`, which are defined by the [hotspot=variables file=0]`variable` elements.
 
+You can use the Containerfile to try out your application with the PostGreSQL database by running the `devc` goal.
+
+The Open Liberty Maven plug-in includes a `devc` goal that simplifies developing your application in a container by starting dev mode with container support. This goal builds a Podman image, mounts the required directories, binds the required ports, and then runs the application inside of a container. Dev mode also listens for any changes in the application source code or configuration and rebuilds the image and restarts the container as necessary.
+
+Retrieve the PostgreSQL container IP address by running the following command:
+[role='command']
+```
+podman inspect -f "{{.NetworkSettings.IPAddress }}" postgres-container
+```
+The command returns the PostgreSQL container IP address:
+[role="no_copy"]
+----
+172.17.0.2
+----
+Build and run the container by running the `devc` goal with the PostgreSQL container IP address from the `start/inventory` directory. If your PostgreSQL container IP address is not `172.17.0.2`, replace the command with the right IP address.
+ifndef::cloud-hosted[]
+[role='command']
+```
+mvn liberty:devc -DdockerRunOpts="-e POSTGRES_HOSTNAME=172.17.0.2" -DserverStartTimeout=240
+```
+endif::[]
+ifdef::cloud-hosted[]
+```bash
+chmod 777 /home/project/guide-liberty-deep-dive/start/inventory/target/liberty/wlp/usr/servers/defaultServer/logs
+POSTGRES_IP=`podaman inspect -f "{{.NetworkSettings.IPAddress }}" postgres-container`
+mvn liberty:devc \
+  -DdockerRunOpts="-e POSTGRES_HOSTNAME=$POSTGRES_IP" \
+  -DserverStartTimeout=240
+```
+endif::[]
+You need to wait a while to let dev mode start. After you see the following message, your Liberty instance is ready in dev mode:
+[role="no_copy"]
+----
+**************************************************************
+*    Liberty is running in dev mode.
+*    ...
+*    Podman network information:
+*        Container name: [ liberty-dev ]
+*        IP address [ 172.17.0.2 ] on Docker network [ bridge ]
+*    ...
+----
+Open another command-line session and run the following command to make sure that your container is running and didn’t crash:
+[role='command']
+```
+podman ps 
+```
+You can see something similar to the following output:
+[role="no_copy"]
+----
+CONTAINER ID  IMAGE               COMMAND                 CREATED        STATUS        PORTS                                                                   NAMES
+ee2daf0b33e1  inventory-dev-mode  "/opt/ol/helpers/run…"  2 minutes ago  Up 2 minutes  0.0.0.0:7777->7777/tcp, 0.0.0.0:9080->9080/tcp, 0.0.0.0:9443->9443/tcp  liberty-dev
+----
+ifndef::cloud-hosted[]
+Point your browser to the http://localhost:9080/openapi/ui URL to try out your application. 
+endif::[]
+ifdef::cloud-hosted[]
+Try out your application by the following commands:
+```bash
+curl -s http://localhost:9080/health | jq
+```
+```bash
+curl 'http://localhost:9080/inventory/api/systems'
+```
+endif::[]
+When you're finished trying out the microservice, press `CTRL+C` in the command-line session where you started dev mode to stop and remove the container.
+Also, run the following commands to stop the PostgreSQL container that was started in the previous section.
+[role='command']
+```
+podman stop postgres-container
+podman rm postgres-container
+```
+
+
 === Building the container image
 
 Run the `war` task from the `start/inventory` directory so that the `.war` file resides in the `build/libs` directory.
